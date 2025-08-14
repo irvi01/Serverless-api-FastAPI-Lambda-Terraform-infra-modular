@@ -52,5 +52,25 @@
       "Action": ["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents","logs:PutRetentionPolicy"],
       "Resource": "*"
     }
+	    ,
+    { "Sid": "ApiGwApiKeys",
+      "Effect": "Allow",
+      "Action": ["apigateway:POST","apigateway:GET","apigateway:PUT","apigateway:DELETE","apigateway:PATCH"],
+      "Resource": [
+        "arn:aws:apigateway:us-east-1::/apikeys",
+        "arn:aws:apigateway:us-east-1::/apikeys/*"
+      ]
+    },
+    { "Sid": "ApiGwUsagePlans",
+      "Effect": "Allow",
+      "Action": ["apigateway:POST","apigateway:GET","apigateway:PUT","apigateway:DELETE","apigateway:PATCH"],
+      "Resource": [
+        "arn:aws:apigateway:us-east-1::/usageplans",
+        "arn:aws:apigateway:us-east-1::/usageplans/*",
+        "arn:aws:apigateway:us-east-1::/usageplankeys",
+        "arn:aws:apigateway:us-east-1::/usageplankeys/*"
+      ]
+    }
+
   ]
 }
