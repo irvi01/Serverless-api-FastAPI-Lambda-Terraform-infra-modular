@@ -1,31 +1,21 @@
 # Role IAM com permissão para logar no CloudWatch e executar a Lambda
 
 # Serviço lambda pode assumir esta role
-data "aws_iam_policy_document" "assume" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["lambda.amazonaws.com"]
-    }
-  }
+# (Aqui não vamos criar a role para evitar erro 409. Vamos apenas LER a role existente.)
+data "aws_iam_role" "lambda_role" {
+  name = "challenge-api-role"
 }
 
 # Role da função Lambda
-resource "aws_iam_role" "lambda_role" {
-  name = "challenge-api-role"
-  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
-
-  lifecycle {
-    prevent_destroy = true
-    ignore_changes = [name]
-  }
-}
+# (Mantido o comentário: a role é a "challenge-api-role", já existente. Não criamos novamente.)
+# (Se precisar criar uma vez manualmente, use o passo que já fizemos fora do Terraform.)
+# (Sem lifecycle aqui porque não há recurso sendo criado.)
+# -- REMOVIDO o resource "aws_iam_role" para evitar EntityAlreadyExists (409) --
 
 # Política inline mínima para gerar logs no CloudWatch
 resource "aws_iam_role_policy" "lambda_logs" {
   name = "${var.lambda_name}-logs"
-  role = aws_iam_role.lambda_role.id
+  role = data.aws_iam_role.lambda_role.id
 
   policy = jsonencode({
     Version = "2012-10-17",
@@ -48,7 +38,7 @@ resource "aws_iam_role_policy" "lambda_logs" {
 resource "aws_lambda_function" "this" {
 
   function_name    = var.lambda_name
-  role             = aws_iam_role.lambda_role.arn
+  role             = data.aws_iam_role.lambda_role.arn
   filename         = var.zip_file
   handler          = "api.handler"
   runtime          = var.runtime
