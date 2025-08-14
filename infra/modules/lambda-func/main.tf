@@ -13,8 +13,13 @@ data "aws_iam_policy_document" "assume" {
 
 # Role da função Lambda
 resource "aws_iam_role" "lambda_role" {
-  name               = "${var.lambda_name}-role"
-  assume_role_policy = data.aws_iam_policy_document.assume.json
+  name = "challenge-api-role"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes = [name]
+  }
 }
 
 # Política inline mínima para gerar logs no CloudWatch

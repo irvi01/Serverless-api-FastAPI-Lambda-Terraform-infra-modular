@@ -34,12 +34,18 @@
     },
 
     { "Sid": "IamForLambdaRoleSelfService",
-      "Effect": "Allow",
-      "Action": [
-        "iam:CreateRole","iam:DeleteRole","iam:PutRolePolicy","iam:DeleteRolePolicy","iam:GetRole"
-      ],
-      "Resource": ["arn:aws:iam::160927904809:role/challenge-api-role"]
-    },
+  "Effect": "Allow",
+  "Action": [
+    "iam:CreateRole",
+    "iam:DeleteRole",
+    "iam:PutRolePolicy",
+    "iam:DeleteRolePolicy",
+    "iam:GetRole",
+    "iam:ListRolePolicies",
+    "iam:GetRolePolicy"
+  ],
+  "Resource": ["arn:aws:iam::160927904809:role/challenge-api-role"]
+     },
 
     { "Sid": "ApiGwCrud",
       "Effect": "Allow",
@@ -74,3 +80,4 @@
 
   ]
 }
+
