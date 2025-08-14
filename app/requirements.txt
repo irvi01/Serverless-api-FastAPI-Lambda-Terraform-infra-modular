@@ -1,0 +1,3 @@
+fastapi==0.115.0 # FastAPI para buildar APIs
+mangum==0.17.0 # Mangum para deploy em AWS Lambda
+uvicorn==0.30.6 # Uvicorn só pra teste local 
