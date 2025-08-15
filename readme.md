@@ -48,27 +48,6 @@ DynamoDB table: desafio-tf-locks (state lock)
 
 ---
 
-## ⏱️ Em 60 segundos: como tudo conversa
-1. É dado um` **push** na `main` → o **GitHub Action** começa.
-2. O Action usa **OIDC** para **assumir uma IAM Role** na AWS (credenciais temporárias, nada de chave fixa).
-3. O **Terraform** inicializa com **state no S3** e **lock no DynamoDB**, aplica a infra (Lambda, API Gateway, etc.).
-4. Sai no output a **URL da API** e a **API Key** para uso.
-5. A Action roda **smoke tests** chamando `/health` e `/hello` com a **API Key**.
-
----
-
-## 📚 Glossário 
-- **ASGI** (Asynchronous Server Gateway Interface) → “gramática” moderna pra apps web Python falarem com servidores de forma **assíncrona** (inclui WebSockets). O **FastAPI** fala ASGI.
-- **Mangum** → O “intérprete” que traduz **API Gateway/Lambda ↔ ASGI**. Permite FastAPI rodar dentro da Lambda.
-- **OIDC** (OpenID Connect) → Jeito seguro do GitHub provar quem ele é para a AWS e **conseguir credenciais temporárias** sem gravar senha/keys.
-- **STS** (Security Token Service) → Serviço da AWS que **emite credenciais temporárias** quando a Action assume a Role.
-- **Terraform Backend** → Onde o **state** do Terraform mora (aqui: **S3**). Sem isso, cada máquina teria um state diferente (caos).
-- **State Lock** → Cadeado no state (aqui: **DynamoDB**) para **evitar dois applys ao mesmo tempo**.
-- **API Key** → Uma chave simples no header (`x-api-key`) pra controlar quem consome a API.
-- **Usage Plan** → Regras de **limite de uso** por API Key (quantas req por segundo e por mês).
-
----
-
 ## 🧰 Tech stack
 - **Linguagem:** Python 3.12
 - **Framework:** FastAPI + Mangum (adapter ASGI para Lambda)
@@ -90,6 +69,15 @@ DynamoDB table: desafio-tf-locks (state lock)
   - `modules/apigw-rest` → API, métodos, integrações, stage `prod`, API Key, Usage Plan.
 - **Backend do Terraform**: S3 (`challenge-entrevista`) + DynamoDB (`desafio-tf-locks`).
 - **Pipeline** (`.github/workflows/deploy.yaml`): empacota, assume role via OIDC, `init/plan/apply`, smoke tests.
+
+---
+
+## ⏱️ Como tudo conversa
+1. É dado um` **push** na `main` → o **GitHub Action** começa.
+2. O Action usa **OIDC** para **assumir uma IAM Role** na AWS (credenciais temporárias, nada de chave fixa).
+3. O **Terraform** inicializa com **state no S3** e **lock no DynamoDB**, aplica a infra (Lambda, API Gateway, etc.).
+4. Sai no output a **URL da API** e a **API Key** para uso.
+5. A Action roda **smoke tests** chamando `/health` e `/hello` com a **API Key**.
 
 ---
 
@@ -118,22 +106,7 @@ aws s3api put-bucket-encryption   --bucket "$BUCKET"   --server-side-encryption-
     "Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]
   }'
 
-# 3) (opcional) Forçar TLS only
-aws s3api put-bucket-policy --bucket "$BUCKET" --policy '{
-  "Version":"2012-10-17",
-  "Statement":[{
-    "Sid":"DenyInsecureTransport",
-    "Effect":"Deny",
-    "Principal":"*",
-    "Action":"s3:*",
-    "Resource":[
-      "arn:aws:s3:::'"$BUCKET"'",
-      "arn:aws:s3:::'"$BUCKET"'/*"
-    ],
-    "Condition":{"Bool":{"aws:SecureTransport":"false"}}
-  }]}'
-
-# 4) Criar tabela DynamoDB para lock
+# 3) Criar tabela DynamoDB para lock
 aws dynamodb create-table   --table-name "$TABLE"   --attribute-definitions AttributeName=LockID,AttributeType=S   --key-schema AttributeName=LockID,KeyType=HASH   --billing-mode PAY_PER_REQUEST   --region "$REGION"
 ```
 
@@ -149,7 +122,7 @@ terraform init -reconfigure   -backend-config="bucket=$BUCKET"   -backend-config
   - `TF_STATE_TABLE`  = `desafio-tf-locks`
   - `AWS_REGION`      = `us-east-1`
 
-> Dica: padronize o **key** do state por projeto/ambiente (ex.: `infra/terraform.tfstate`).
+> Importante: padronize o **key** do state por projeto/ambiente (ex.: `infra/terraform.tfstate`).
 
 ---
 
@@ -208,13 +181,13 @@ curl -sS -H "x-api-key: $API_KEY" "$API_URL/hello?name=Irvi"
 
 **State protegido**
 - **S3 com versionamento + SSE (AES-256)**.
-- **DynamoDB** como lock (evita corridas e corrupção).
+- **DynamoDB** como lock (evita runs simultaneas e corrupção).
 
-> Próximos passos de hardening: WAF no API Gateway, alarms (5xx/Throttles), rotação das API Keys, authorizer JWT (Cognito) e KMS gerenciado se necessário.
+> Possíveis proximos passos: WAF no API Gateway, alarms (5xx/Throttles), rotação das API Keys, authorizer JWT (Cognito) e KMS gerenciado se necessário.
 
 ---
 
-## ⏱️ Limites de uso (throttling & quotas) — explicado simples
+## ⏱️ Limites de uso (throttling & quotas) 
 Pensa em duas “catracas”:  
 1) **Do Stage/Method** (nível da API como um todo).  
 2) **Do Usage Plan** (nível de cada API Key).  
@@ -245,10 +218,10 @@ seq 1 200 | xargs -n1 -P50 -I{}   curl -s -o /dev/null -w "%{http_code}
 
 ---
 
-## 🐛 Erros que vimos (e como consertamos)
+## 🐛 Erros que encontrei (e como consertei)
 - **409 – `Lambda CreateFunction`: já existe**
   - **Causa**: a função existia, mas o **state** da pipeline estava em outro **key**.
-  - **Fix**: importar a função no state (`terraform import … challenge-api`) e migrar para `infra/terraform.tfstate`. Dica: **import declarativo** no código.
+  - **Fix**: importar a função no state (`terraform import … challenge-api`) e migrar para `infra/terraform.tfstate`.
 
 - **403 – `S3 HeadObject Forbidden` no init**
   - **Causa**: bucket errado/typo **ou** falta de permissão na role OIDC.
@@ -256,7 +229,7 @@ seq 1 200 | xargs -n1 -P50 -I{}   curl -s -o /dev/null -w "%{http_code}
 
 - **DynamoDB `ConditionalCheckFailed` (lock preso)**
   - **Causa**: cadeado do state ficou órfão numa migração.
-  - **Fix**: `terraform force-unlock -force <LOCK_ID>` e repetir a migração.
+  - **Fix**: `terraform force-unlock -force <LOCK_ID>`
 
 - **`API Gateway BadRequest: Invalid ARN`**
   - **Causa**: `var.region` vazio → ARN sem região e URL com `execute-api..amazonaws.com`.
@@ -268,9 +241,7 @@ seq 1 200 | xargs -n1 -P50 -I{}   curl -s -o /dev/null -w "%{http_code}
 
 - **Smoke falhou mesmo com resposta OK**
   - **Causa**: `grep` era rígido (`"Hello, CI"`) e a resposta tinha `!`.
-  - **Fix**: validar com `jq` ou regex tolerante.
-
-> Proteção permanente: um step que falha se o plan tentar **criar** a Lambda (state divergente).
+  - **Fix**: validar com `jq`
 
 ---
 
@@ -306,10 +277,18 @@ desafio-entrevista/
 ## 📌 Próximos passos legais
 - Versionar/alias da Lambda (deploys 0-downtime).
 - Observabilidade melhor (métricas + alarmes).
-- Stage `dev` com **Usage Plans** separados.
-- Auth “de verdade” (JWT/Cognito) quando necessário.
+- Adição de outros stage como `dev`, com **Usage Plans** separados.
 
 ---
 
-## 📜 Licença
-Este repositório é um desafio técnico. Ajuste a licença conforme necessidade (MIT, Apache-2.0, etc.).
+## 📚 Glossário 
+- **ASGI** (Asynchronous Server Gateway Interface) → “gramática” moderna pra apps web Python falarem com servidores de forma **assíncrona** (inclui WebSockets). O **FastAPI** fala ASGI.
+- **Mangum** → O “intérprete” que traduz **API Gateway/Lambda ↔ ASGI**. Permite FastAPI rodar dentro da Lambda.
+- **OIDC** (OpenID Connect) → Jeito seguro do GitHub provar quem ele é para a AWS e **conseguir credenciais temporárias** sem gravar senha/keys.
+- **STS** (Security Token Service) → Serviço da AWS que **emite credenciais temporárias** quando a Action assume a Role.
+- **Terraform Backend** → Onde o **state** do Terraform mora (aqui: **S3**). Sem isso, cada máquina teria um state diferente (caos).
+- **State Lock** → Cadeado no state (aqui: **DynamoDB**) para **evitar dois applys ao mesmo tempo**.
+- **API Key** → Uma chave simples no header (`x-api-key`) pra controlar quem consome a API.
+- **Usage Plan** → Regras de **limite de uso** por API Key (quantas req por segundo e por mês).
+
+---
