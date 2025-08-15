@@ -16,3 +16,13 @@ module "apigw_rest" {
   throttle_burst       = 50
   throttle_rate        = 100
 }
+
+module "waf_apigw" {
+  source     = "./modules/waf-apigw"
+  name       = "challenge-api-waf"
+  region     = var.region
+  api_id     = module.apigw_rest.rest_api_id
+  stage_name = module.apigw_rest.stage_name
+  rate_limit = 500
+  tags       = { Project = "challenge-api" }
+}
