@@ -140,3 +140,64 @@ resource "aws_api_gateway_usage_plan_key" "bind" {
   key_type      = "API_KEY"
   usage_plan_id = aws_api_gateway_usage_plan.plan.id
 }
+
+# Role do API Gateway para escrever logs no CloudWatch
+# (necessário para logs de acesso, métricas, etc.)
+resource "aws_iam_role" "apigw_cw" {
+  name = var.api_gw_logs_role_name
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect    = "Allow",
+      Principal = { Service = "apigateway.amazonaws.com" },
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "apigw_cw_managed" {
+  role       = aws_iam_role.apigw_cw.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+resource "aws_api_gateway_account" "account" {
+  cloudwatch_role_arn = aws_iam_role.apigw_cw.arn
+}
+
+
+resource "aws_cloudwatch_log_group" "apigw_access" {
+  name              = "/aws/apigateway/${aws_api_gateway_rest_api.this.name}/access"
+  retention_in_days = var.logs_retention_days
+}
+
+resource "aws_api_gateway_stage" "prod" {
+  rest_api_id          = aws_api_gateway_rest_api.this.id
+  deployment_id        = aws_api_gateway_deployment.dep.id
+  stage_name           = "prod"
+  xray_tracing_enabled = true
+
+  # Logs de acesso
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.apigw_access.arn
+    # JSON facilita parse no CloudWatch Logs Insights
+    format = jsonencode({
+      requestId      = "$context.requestId",
+      ip             = "$context.identity.sourceIp",
+      requestTime    = "$context.requestTime",
+      httpMethod     = "$context.httpMethod",
+      path           = "$context.path",
+      protocol       = "$context.protocol",
+      status         = "$context.status",
+      responseLength = "$context.responseLength",
+      errorMessage   = "$context.error.message",
+      integrationErr = "$context.integration.error"
+    })
+  }
+
+  # Garante que a conta do APIGW e o LogGroup existam antes do stage
+  depends_on = [
+    aws_api_gateway_account.account,
+    aws_cloudwatch_log_group.apigw_access
+  ]
+}

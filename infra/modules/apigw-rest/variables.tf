@@ -16,3 +16,14 @@ variable "lambda_arn" {
   type        = string
   description = "ARN da função Lambda"
 }
+variable "logs_retention_days" {
+  description = "Dias de retenção dos access logs do API Gateway"
+  type        = number
+  default     = 14
+}
+
+variable "api_gw_logs_role_name" {
+  description = "Nome da role que o API Gateway usa para escrever no CloudWatch"
+  type        = string
+  default     = "apigw-cloudwatch-logs"
+}
