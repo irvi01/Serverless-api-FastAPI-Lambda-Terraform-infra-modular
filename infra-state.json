@@ -1,0 +1,247 @@
+{
+  "version": 4,
+  "terraform_version": "1.12.2",
+  "serial": 1,
+  "lineage": "c448b70c-4c61-9290-a4c3-93ad500f0c2d",
+  "outputs": {
+    "api_key": {
+      "value": "Dr22bveftc3ELRvhoAtcH1meRZjMN0gualVc5HvO",
+      "type": "string",
+      "sensitive": true
+    }
+  },
+  "resources": [
+    {
+      "module": "module.apigw_rest",
+      "mode": "managed",
+      "type": "aws_api_gateway_api_key",
+      "name": "key",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:apigateway:us-east-1::/apikeys/r35d5veu54",
+            "created_date": "2025-08-15T00:02:47Z",
+            "customer_id": "",
+            "description": "Managed by Terraform",
+            "enabled": true,
+            "id": "r35d5veu54",
+            "last_updated_date": "2025-08-15T00:02:47Z",
+            "name": "challenge-api-api-key",
+            "tags": null,
+            "tags_all": {},
+            "value": "Dr22bveftc3ELRvhoAtcH1meRZjMN0gualVc5HvO"
+          },
+          "sensitive_attributes": [
+            [
+              {
+                "type": "get_attr",
+                "value": "value"
+              }
+            ]
+          ],
+          "identity_schema_version": 0,
+          "private": "bnVsbA=="
+        }
+      ]
+    },
+    {
+      "module": "module.apigw_rest",
+      "mode": "managed",
+      "type": "aws_api_gateway_method",
+      "name": "any_proxy",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "api_key_required": true,
+            "authorization": "NONE",
+            "authorization_scopes": null,
+            "authorizer_id": null,
+            "http_method": "ANY",
+            "id": "agm-vqr8qkhri5-4l6kpa-ANY",
+            "operation_name": null,
+            "request_models": null,
+            "request_parameters": null,
+            "request_validator_id": null,
+            "resource_id": "4l6kpa",
+            "rest_api_id": "vqr8qkhri5"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "module.apigw_rest.aws_api_gateway_resource.proxy",
+            "module.apigw_rest.aws_api_gateway_rest_api.this"
+          ],
+          "create_before_destroy": true
+        }
+      ]
+    },
+    {
+      "module": "module.apigw_rest",
+      "mode": "managed",
+      "type": "aws_api_gateway_method",
+      "name": "any_root",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "api_key_required": true,
+            "authorization": "NONE",
+            "authorization_scopes": null,
+            "authorizer_id": null,
+            "http_method": "ANY",
+            "id": "agm-vqr8qkhri5-cw8z33vmxk-ANY",
+            "operation_name": null,
+            "request_models": null,
+            "request_parameters": null,
+            "request_validator_id": null,
+            "resource_id": "cw8z33vmxk",
+            "rest_api_id": "vqr8qkhri5"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "module.apigw_rest.aws_api_gateway_rest_api.this"
+          ],
+          "create_before_destroy": true
+        }
+      ]
+    },
+    {
+      "module": "module.apigw_rest",
+      "mode": "managed",
+      "type": "aws_api_gateway_resource",
+      "name": "proxy",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "4l6kpa",
+            "parent_id": "cw8z33vmxk",
+            "path": "/{proxy+}",
+            "path_part": "{proxy+}",
+            "rest_api_id": "vqr8qkhri5"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "module.apigw_rest.aws_api_gateway_rest_api.this"
+          ],
+          "create_before_destroy": true
+        }
+      ]
+    },
+    {
+      "module": "module.apigw_rest",
+      "mode": "managed",
+      "type": "aws_api_gateway_rest_api",
+      "name": "this",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "api_key_source": "HEADER",
+            "arn": "arn:aws:apigateway:us-east-1::/restapis/vqr8qkhri5",
+            "binary_media_types": [],
+            "body": null,
+            "created_date": "2025-08-15T00:02:47Z",
+            "description": "",
+            "disable_execute_api_endpoint": false,
+            "endpoint_configuration": [
+              {
+                "ip_address_type": "ipv4",
+                "types": [
+                  "EDGE"
+                ],
+                "vpc_endpoint_ids": []
+              }
+            ],
+            "execution_arn": "arn:aws:execute-api:us-east-1:160927904809:vqr8qkhri5",
+            "fail_on_warnings": null,
+            "id": "vqr8qkhri5",
+            "minimum_compression_size": "",
+            "name": "challenge-api-api",
+            "parameters": null,
+            "policy": "",
+            "put_rest_api_mode": null,
+            "root_resource_id": "cw8z33vmxk",
+            "tags": null,
+            "tags_all": {}
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "create_before_destroy": true
+        }
+      ]
+    },
+    {
+      "module": "module.lambda_func",
+      "mode": "data",
+      "type": "aws_iam_role",
+      "name": "lambda_role",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:iam::160927904809:role/challenge-api-role",
+            "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+            "create_date": "2025-08-14T23:04:58Z",
+            "description": "",
+            "id": "challenge-api-role",
+            "max_session_duration": 3600,
+            "name": "challenge-api-role",
+            "path": "/",
+            "permissions_boundary": "",
+            "role_last_used": [
+              {
+                "last_used_date": "",
+                "region": ""
+              }
+            ],
+            "tags": {},
+            "unique_id": "AROASK6AM6QUV2T5RYTOX"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "module": "module.lambda_func",
+      "mode": "managed",
+      "type": "aws_iam_role_policy",
+      "name": "lambda_logs",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "challenge-api-role:challenge-api-logs",
+            "name": "challenge-api-logs",
+            "name_prefix": "",
+            "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":[\"logs:CreateLogGroup\",\"logs:CreateLogStream\",\"logs:PutLogEvents\"],\"Effect\":\"Allow\",\"Resource\":\"*\"}]}",
+            "role": "challenge-api-role"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "module.lambda_func.data.aws_iam_role.lambda_role"
+          ]
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}
