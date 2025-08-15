@@ -23,6 +23,5 @@ module "waf_apigw" {
   region     = var.region
   api_id     = module.apigw_rest.rest_api_id
   stage_name = module.apigw_rest.stage_name
-  rate_limit = 500
   tags       = { Project = "challenge-api" }
 }
