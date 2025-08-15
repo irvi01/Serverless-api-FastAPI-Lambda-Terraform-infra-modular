@@ -71,6 +71,11 @@ jobs:
         working-directory: infra
         run: terraform validate
 
+      - name: Debug TF state (lista recursos)
+        working-directory: infra
+        run: |
+            terraform state list || echo "state vazio"
+
       - name: Terraform Plan
         working-directory: infra
         run: terraform plan -var="region=${AWS_REGION}" -var="package_zip=../package.zip"
