@@ -4,6 +4,8 @@ variable "region" { type = string }
 variable "lambda_invoke_arn" { type = string } # de module.lambda_func.invoke_arn, 
 # necessário para integração com o API Gateway
 variable "lambda_function_name" { type = string } # de module.lambda_func.function_name
+
+#Bursts e Rate limits do API Gateway
 variable "throttle_burst" {
   type    = number
   default = 50

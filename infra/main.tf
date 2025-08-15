@@ -1,3 +1,6 @@
+#Infraestructure main.tf
+
+#Modulo da lambda
 module "lambda_func" {
   source      = "./modules/lambda-func"
   lambda_name = var.lambda_name
@@ -6,6 +9,7 @@ module "lambda_func" {
   timeout_sec = var.timeout_sec
   zip_file    = var.package_zip
 }
+# Modulo do API Gateway REST
 module "apigw_rest" {
   source               = "./modules/apigw-rest"
   api_name             = "${var.lambda_name}-api"
@@ -17,6 +21,7 @@ module "apigw_rest" {
   throttle_rate        = 100
 }
 
+# Modulo do WAF para o API Gateway
 module "waf_apigw" {
   source     = "./modules/waf-apigw"
   name       = "challenge-api-waf"

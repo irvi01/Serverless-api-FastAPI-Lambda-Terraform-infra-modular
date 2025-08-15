@@ -1,7 +1,5 @@
 # Challenge API — FastAPI on AWS Lambda (Terraform + GitHub Actions)
 
-> Backendzinho enxuto, infra como código e deploy sem drama. 😎
-
 ## 🧭 Visão geral
 Este projeto entrega uma **API FastAPI** rodando em **AWS Lambda**, exposta pelo **API Gateway REST** e protegida por **API Key + Usage Plan**.  
 A infra é criada com **Terraform** (state remoto em **S3** com lock em **DynamoDB**) e o deploy é automático via **GitHub Actions** usando **OIDC**.

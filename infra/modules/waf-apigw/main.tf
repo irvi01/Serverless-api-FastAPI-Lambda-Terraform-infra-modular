@@ -1,21 +1,23 @@
+# ARN do API Gateway Stage
 locals {
   apigw_stage_arn = "arn:aws:apigateway:${var.region}::/restapis/${var.api_id}/stages/${var.stage_name}"
 }
 
+#Criação do WAF v2 Regional para o API Gateway
 resource "aws_wafv2_web_acl" "this" {
   name  = var.name
   scope = var.scope
-
+  # Default action: permite todo tráfego que não for bloqueado por regras
   default_action {
     allow {}
   }
-
+  # Configuração de visibilidade do WAF
   visibility_config {
     cloudwatch_metrics_enabled = true
     metric_name                = "${var.name}-metrics"
     sampled_requests_enabled   = true
   }
-
+  # Regras do WAF  
   rule {
     name     = "RateLimitPerIP"
     priority = 1
@@ -41,6 +43,7 @@ resource "aws_wafv2_web_acl" "this" {
   tags = var.tags
 }
 
+# Associação do WAF com o API Gateway Stage
 resource "aws_wafv2_web_acl_association" "this" {
   resource_arn = local.apigw_stage_arn
   web_acl_arn  = aws_wafv2_web_acl.this.arn

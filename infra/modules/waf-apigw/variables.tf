@@ -1,7 +1,7 @@
 variable "name" { type = string }
 variable "region" { type = string }     # mesma região do API
 variable "api_id" { type = string }     # ID do API Gateway REST
-variable "stage_name" { type = string } # ex: "prod"
+variable "stage_name" { type = string } 
 variable "rate_limit" {
   type    = number
   default = 25
@@ -15,7 +15,7 @@ variable "tags" {
   default = {}
 }
 
-# WAF v2 REGIONAL (para API GW Regional). Se um dia for usar CLOUDFRONT, muda aqui.
+# WAF v2 REGIONAL 
 variable "scope" {
   type    = string
   default = "REGIONAL"
