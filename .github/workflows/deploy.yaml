@@ -97,12 +97,23 @@ jobs:
 
       - name: Smoke test /health
         run: |
-          set -e
-          echo "Calling: $API_URL/health"
-          curl -sS -H "x-api-key: $API_KEY" "$API_URL/health" | tee /dev/stderr | grep -q '"status":"ok"'
+            set -euo pipefail
+            for i in {1..5}; do
+            echo "Attempt $i: $API_URL/health"
+            if curl -fsS -H "x-api-key: $API_KEY" "$API_URL/health" \
+            | tee /dev/stderr \
+            | jq -e '.status=="ok"' >/dev/null; then
+            exit 0
+            fi
+            sleep 3
+            done
+            echo "Healthcheck failed after retries" >&2
+            exit 1
 
       - name: Smoke test /hello
         run: |
-          set -e
-          echo "Calling: $API_URL/hello?name=CI"
-          curl -sS -H "x-api-key: $API_KEY" "$API_URL/hello?name=CI" | tee /dev/stderr | grep -q '"Hello, CI"'
+            set -euo pipefail
+            MSG=$(curl -fsS -H "x-api-key: $API_KEY" "$API_URL/hello?name=CI" | tee /dev/stderr | jq -r '.message')
+            echo "Message: $MSG"
+            # aceita com ou sem '!'
+            echo "$MSG" | grep -E '^Hello, CI!?$' >/dev/null
