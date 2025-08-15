@@ -63,10 +63,13 @@ DynamoDB table: desafio-tf-locks (state lock)
 - **API Gateway REST** com:
   - Rota `ANY /{proxy+}` e `ANY /` (Lambda Proxy Integration).
   - **API Key** + **Usage Plan** (quota e throttling).
+  - Access Logs habilitados com retenção configurável (Log Group: /aws/apigateway/<api-name>/access).
+- **AWS WAF v2** associado ao Stage prod com Rate-Based Rule por IP (bloqueio quando exceder o limite).
 - **Permissão** para o API Gateway invocar a Lambda.
 - **Terraform modular**:
   - `modules/lambda-func` → função + IAM mínimo de logs.
   - `modules/apigw-rest` → API, métodos, integrações, stage `prod`, API Key, Usage Plan.
+  - `modules/waf-apigw` → WebACL + associação ao Stage do API Gateway.
 - **Backend do Terraform**: S3 (`challenge-entrevista`) + DynamoDB (`desafio-tf-locks`).
 - **Pipeline** (`.github/workflows/deploy.yaml`): empacota, assume role via OIDC, `init/plan/apply`, smoke tests.
 
@@ -155,6 +158,7 @@ terraform output -raw api_key
 ---
 
 ## 🧪 Como testar rápido
+**Teste da API**
 ```bash
 API_URL=$(terraform -chdir=infra output -raw api_url)
 API_KEY=$(terraform -chdir=infra output -raw api_key)
@@ -166,12 +170,36 @@ curl -sS -H "x-api-key: $API_KEY" "$API_URL/hello?name=Irvi"
 # -> {"message":"Hello, Irvi!"}
 ```
 
+**Teste do WAF (rate limit)**
+
+O WAF está configurado com limite por IP (padrão: var.rate_limit requisições a cada 5 min).
+Ao estourar o limite, o WAF bloqueia com HTTP 403.
+```bash
+# 60 requisições simultâneas (espera ver vários 403)
+for i in $(seq 1 60); do
+  curl -s -o /dev/null -w "%{http_code}\n" \
+    -H "x-api-key: $API_KEY" "$API_URL/health" &
+done; wait
+```
+Verificação via CLI do rate limit configurado:
+```bash
+REGION=$(terraform -chdir=infra output -raw region)
+API_ID=$(terraform -chdir=infra output -raw api_url | sed -E 's#https://([^.]+)\..*#\1#')
+
+aws wafv2 get-web-acl-for-resource \
+  --resource-arn arn:aws:apigateway:${REGION}::/restapis/${API_ID}/stages/prod \
+  --region ${REGION} \
+  --query 'WebACL.Rules[?Name==`RateLimitPerIP`].Statement.RateBasedStatement.Limit'
+
+```
+
 ---
 
 ## 🔒 Segurança (o que já tem hoje)
 **API & rede**
 - **API Key obrigatória** em todos os métodos (Usage Plan aplicado).
 - **Somente HTTPS** no API Gateway (TLS obrigatório).
+- **AWS WAF v2** com rate-limit por IP (resposta 403 quando exceder).
 
 **Identidade & acesso**
 - **OIDC** na pipeline → **credenciais temporárias** (nada de chaves fixas).
@@ -183,15 +211,33 @@ curl -sS -H "x-api-key: $API_KEY" "$API_URL/hello?name=Irvi"
 - **S3 com versionamento + SSE (AES-256)**.
 - **DynamoDB** como lock (evita runs simultaneas e corrupção).
 
-> Possíveis proximos passos: WAF no API Gateway, alarms (5xx/Throttles), rotação das API Keys, authorizer JWT (Cognito) e KMS gerenciado se necessário.
+**Observabilidade**
+- **Cloudwatch** com grupo de logs para Lambda e API Gateway
+- **Métricas** como Duration da chamada, Billed Duration, Memory Used, XRAY Trace ID para a Lambda
+- Logs em json de resposta do grupo **API Gateway**:
+    ```json
+    {
+    "errorMessage": "Forbidden",
+    "httpMethod": "GET",
+    "integrationErr": "-",
+    "ip": "189.46.77.185",
+    "path": "/prod/health",
+    "protocol": "HTTP/1.1",
+    "requestId": "b84df9bc-9cff-43cf-ac1b-cc94820b7809",
+    "requestTime": "15/Aug/2025:13:29:27 +0000",
+    "responseLength": "23",
+    "status": "403"
+    }
+    ```
 
 ---
 
 ## ⏱️ Limites de uso (throttling & quotas) 
-Pensa em duas “catracas”:  
+Duas “catracas” paralelas:  
 1) **Do Stage/Method** (nível da API como um todo).  
 2) **Do Usage Plan** (nível de cada API Key).  
-
+  > O limite efetivo por cliente é o menor entre Stage/Method e Usage Plan.
+  > WAF é adicional: se o IP passar do rate do WAF, recebe 403 (antes mesmo da Lambda).
 O **limite que vale** para um cliente é o **menor** dos dois.
 
 **Valores padrão neste projeto:**
@@ -199,22 +245,11 @@ O **limite que vale** para um cliente é o **menor** dos dois.
 - **Throttling por API Key:** 100 req/s com **burst** 50.  
 - **Quota por API Key:** 10.000 req **por mês**.  
 
-Se passar do limite: **HTTP 429 – Too Many Requests**. Tente de novo com **exponential backoff** (esperas crescentes + aleatório).
-
 **Onde mudar isso no código:**
 - `infra/modules/apigw-rest/main.tf`
   - `aws_api_gateway_method_settings "all"` → `throttling_rate_limit`, `throttling_burst_limit`
   - `aws_api_gateway_usage_plan "plan"` → `throttle_settings{}` e `quota_settings{}`
-
-**Como ver o 429 na prática (teste):**
-```bash
-API_URL=$(terraform -chdir=infra output -raw api_url)
-API_KEY=$(terraform -chdir=infra output -raw api_key)
-
-# 200 chamadas concorrentes (agrupa por status)
-seq 1 200 | xargs -n1 -P50 -I{}   curl -s -o /dev/null -w "%{http_code}
-"   -H "x-api-key: $API_KEY" "$API_URL/health" | sort | uniq -c
-```
+  - `infra/modules/waf-apigw/variables.tf` → `rate_limit` (limite por IP, janela fixa de 5 min).
 
 ---
 
@@ -245,15 +280,15 @@ seq 1 200 | xargs -n1 -P50 -I{}   curl -s -o /dev/null -w "%{http_code}
 
 ---
 
-## 🗂️ Estrutura do projeto (resumo)
+## 🗂️ Estrutura do projeto
 ```
-desafio-entrevista/
+Serverless-api-FastAPI-Lambda-Terraform-infra-modular/
 ├─ app/
-│  ├─ api.py                 # FastAPI app + Mangum handler
+│  ├─ api.py                 # FastAPI app + Mangum
 │  └─ requirements.txt
 ├─ infra/
 │  ├─ backend.tf             # backend S3 + DynamoDB (state remoto)
-│  ├─ main.tf                # módulos: lambda-func e apigw-rest
+│  ├─ main.tf                # módulos: lambda-func, apigw-rest, waf-apigw
 │  ├─ providers.tf           # provider AWS
 │  ├─ variables.tf           # region, lambda_name, package_zip...
 │  ├─ outputs.tf             # api_url, api_key
@@ -262,22 +297,28 @@ desafio-entrevista/
 │     │  ├─ main.tf
 │     │  ├─ variables.tf
 │     │  └─ outputs.tf
-│     └─ apigw-rest/
-│        ├─ main.tf
-│        ├─ variables.tf
+│     ├─ apigw-rest/
+│     │  ├─ main.tf          # API + Access Logs + role pro CloudWatch
+│     │  ├─ variables.tf
+│     │  └─ outputs.tf
+│     └─ waf-apigw/
+│        ├─ main.tf          # WebACL + associação ao Stage
+│        ├─ variables.tf     # rate_limit etc.
 │        └─ outputs.tf
 ├─ scripts/
 │  └─ package.sh
 └─ .github/workflows/
    └─ deploy.yaml
+
 ```
 
 ---
 
 ## 📌 Próximos passos legais
 - Versionar/alias da Lambda (deploys 0-downtime).
-- Observabilidade melhor (métricas + alarmes).
+- Logs do WAF no CloudWatch (para ver amostras/contadores da regra).
 - Adição de outros stage como `dev`, com **Usage Plans** separados.
+- Authorizer JWT (Cognito) para auth real (além de API Key).
 
 ---
 
@@ -290,5 +331,6 @@ desafio-entrevista/
 - **State Lock** → Cadeado no state (aqui: **DynamoDB**) para **evitar dois applys ao mesmo tempo**.
 - **API Key** → Uma chave simples no header (`x-api-key`) pra controlar quem consome a API.
 - **Usage Plan** → Regras de **limite de uso** por API Key (quantas req por segundo e por mês).
+- **ARN** → Amazon Resource Name, identificador único de recursos na AWS.
 
 ---
