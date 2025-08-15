@@ -89,8 +89,29 @@ resource "aws_api_gateway_stage" "prod" {
   stage_name           = "prod"
   xray_tracing_enabled = true
 
-  # throttling global por método/rota (cobre tudo)
-  # (movido para aws_api_gateway_method_settings abaixo)
+  # Logs de acesso
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.apigw_access.arn
+    # JSON facilita parse no CloudWatch Logs Insights
+    format = jsonencode({
+      requestId      = "$context.requestId",
+      ip             = "$context.identity.sourceIp",
+      requestTime    = "$context.requestTime",
+      httpMethod     = "$context.httpMethod",
+      path           = "$context.path",
+      protocol       = "$context.protocol",
+      status         = "$context.status",
+      responseLength = "$context.responseLength",
+      errorMessage   = "$context.error.message",
+      integrationErr = "$context.integration.error"
+    })
+  }
+
+  # Garante que a conta do APIGW e o LogGroup existam antes do stage
+  depends_on = [
+    aws_api_gateway_account.account,
+    aws_cloudwatch_log_group.apigw_access
+  ]
 }
 
 # throttling global por método/rota (cobre tudo)
@@ -171,33 +192,3 @@ resource "aws_cloudwatch_log_group" "apigw_access" {
   retention_in_days = var.logs_retention_days
 }
 
-resource "aws_api_gateway_stage" "prod" {
-  rest_api_id          = aws_api_gateway_rest_api.this.id
-  deployment_id        = aws_api_gateway_deployment.dep.id
-  stage_name           = "prod"
-  xray_tracing_enabled = true
-
-  # Logs de acesso
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.apigw_access.arn
-    # JSON facilita parse no CloudWatch Logs Insights
-    format = jsonencode({
-      requestId      = "$context.requestId",
-      ip             = "$context.identity.sourceIp",
-      requestTime    = "$context.requestTime",
-      httpMethod     = "$context.httpMethod",
-      path           = "$context.path",
-      protocol       = "$context.protocol",
-      status         = "$context.status",
-      responseLength = "$context.responseLength",
-      errorMessage   = "$context.error.message",
-      integrationErr = "$context.integration.error"
-    })
-  }
-
-  # Garante que a conta do APIGW e o LogGroup existam antes do stage
-  depends_on = [
-    aws_api_gateway_account.account,
-    aws_cloudwatch_log_group.apigw_access
-  ]
-}
