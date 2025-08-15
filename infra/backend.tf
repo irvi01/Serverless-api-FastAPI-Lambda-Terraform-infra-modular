@@ -3,7 +3,7 @@
 terraform {
   backend "s3" {
     bucket         = "challenge-entrevista"
-    key            = "terraform.tfstate"
+    key            = "infra/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "desafio-tf-locks"
     encrypt        = true
