@@ -117,3 +117,4 @@ jobs:
             echo "Message: $MSG"
             # aceita com ou sem '!'
             echo "$MSG" | grep -E '^Hello, CI!?$' >/dev/null
+ 
