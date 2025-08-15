@@ -7,8 +7,16 @@ A infra é criada com **Terraform** (state remoto em **S3** com lock em **Dynamo
 ### Endpoints
 - `GET /health` → `{"status":"ok"}`
 - `GET /hello?name=SeuNome` → `{"message":"Hello, SeuNome!"}`  
-  > Todos os endpoints pedem `x-api-key: <API_KEY>`
+  > Os endpoints pedem `x-api-key: <API_KEY>`
 
+---
+## 🧰 Tech stack
+- **Linguagem:** Python 3.12
+- **Framework:** FastAPI + Mangum (adapter ASGI para Lambda)
+- **Infra:** Terraform (AWS provider)
+- **AWS:** Lambda, API Gateway REST, S3 (state), DynamoDB (lock), WAF v2, IAM
+- **CI/CD:** GitHub Actions com OIDC
+- **Empacotamento:** `scripts/package.sh` (gera `package.zip`)
 ---
 
 ## 🏗️ Arquitetura simplificada
@@ -43,17 +51,6 @@ A infra é criada com **Terraform** (state remoto em **S3** com lock em **Dynamo
 S3 bucket: challenge-entrevista (state)
 DynamoDB table: desafio-tf-locks (state lock)
 ```
-
----
-
-## 🧰 Tech stack
-- **Linguagem:** Python 3.12
-- **Framework:** FastAPI + Mangum (adapter ASGI para Lambda)
-- **Infra:** Terraform (AWS provider)
-- **AWS:** Lambda, API Gateway REST, S3 (state), DynamoDB (lock), IAM
-- **CI/CD:** GitHub Actions com OIDC
-- **Empacotamento:** `scripts/package.sh` (gera `package.zip`)
-
 ---
 
 ## ✅ O que foi implementado
