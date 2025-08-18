@@ -6,3 +6,7 @@ output "api_key" {
   value     = module.apigw_rest.api_key
   sensitive = true
 }
+
+output "region" {
+  value = var.region
+}
