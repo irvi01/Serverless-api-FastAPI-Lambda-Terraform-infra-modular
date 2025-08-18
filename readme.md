@@ -186,7 +186,8 @@ Ao estourar o limite, o WAF bloqueia com HTTP 403.
 for i in $(seq 1 60); do
   curl -s -o /dev/null -w "%{http_code}\n" \
     -H "x-api-key: $API_KEY" "$API_URL/health" &
-done; wait
+done | sort | uniq -c
+wait
 ```
 Verificação via CLI do rate limit configurado:
 ```bash
