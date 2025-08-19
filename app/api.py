@@ -7,6 +7,10 @@ app = FastAPI(title="Challenge API", version="1.0.0")
 def health():
     return {"status": "ok"}
 
+@app.get("/health2") # rota de verificação simples
+def health():
+    return {"status": "ok"}
+
 @app.get("/hello")   # rota de exemplo com hello e o nome como query parameter
 def hello(name: str = Query("world", min_length=1, max_length=50)):
     return {"message": f"Hello, {name}!"}
